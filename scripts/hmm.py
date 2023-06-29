@@ -6,16 +6,31 @@ import numpy as np
 from scipy.stats import norm
 from rosneuro_msgs.msg import NeuroOutput, NeuroEvent
 
+from dynamic_reconfigure.server import Server
+from rosneuro_hmm.cfg import HmmConfig
+
+def configure_callback(config, level):
+    global bias_bf, bias_bh, bias_rest
+    
+    bias_bf = config['bias_bf']
+    bias_bh = config['bias_bh']
+    bias_rest = config['bias_rest']
+    
+    return config
+
 def compute_likelihood(means,st,samples):
-    bias = 0.5
+    global bias_bf, bias_bh, bias_rest
+    
     bh_p   = 1 
     rest_p = 1 
     bf_p   = 1
 
     for sample in samples:
-        bh_p    *= norm.pdf(sample, loc=means[0], scale=st[0])
-        rest_p  *= ((norm.pdf(sample, loc=means[0], scale=st[0])*(bias) + norm.pdf(sample, loc=means[2], scale=st[2])*(1-bias)))
-        bf_p    *= norm.pdf(sample, loc=means[2], scale=st[2])
+        #bh_p    *= norm.pdf(sample, loc=means[0], scale=st[0])
+        bh_p  *= ((norm.pdf(sample, loc=means[0], scale=st[0])*(1 - bias_bh) + norm.pdf(sample, loc=means[2], scale=st[2])*(bias_bh)))
+        rest_p  *= ((norm.pdf(sample, loc=means[0], scale=st[0])*(bias_rest) + norm.pdf(sample, loc=means[2], scale=st[2])*(1-bias_rest)))
+        #bf_p    *= norm.pdf(sample, loc=means[2], scale=st[2])
+        bf_p  *= ((norm.pdf(sample, loc=means[0], scale=st[0])*(bias_bf) + norm.pdf(sample, loc=means[2], scale=st[2])*(1-bias_bf)))
     
     bh_p   /=len(samples)
     rest_p /=len(samples)
@@ -56,8 +71,16 @@ def main():
     fifo = queue.Queue()
     
     global window
-    window = 16
+    window = 8
+     
+    global bias_bf, bias_bh, bias_rest
+    srv = Server(HmmConfig,configure_callback)
+   
+    bias_bf   = rospy.get_param('~bias_bf'   ,0.0)
+    bias_bh   = rospy.get_param('~bias_bh'   ,0.0)
+    bias_rest = rospy.get_param('~bias_rest' ,0.5)
     
+
     global predictive_prob, likelihoods, posterior_prob
     predictive_prob = []
     likelihoods         = []
@@ -102,6 +125,7 @@ def main():
       state = 1 - state/2
       msg.softpredict.data = np.array([state, 1-state])
       pub.publish(msg)
+
       rate.sleep()
     
 if __name__ == "__main__":
