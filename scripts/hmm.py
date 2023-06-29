@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import  rospy
+import rospy
 import queue
 import numpy as np
 from scipy.stats import norm
@@ -11,11 +11,20 @@ from rosneuro_hmm.cfg import HmmConfig
 
 def configure_callback(config, level):
     global bias_bf, bias_bh, bias_rest
+    global mu, sd
     
     bias_bf = config['bias_bf']
     bias_bh = config['bias_bh']
     bias_rest = config['bias_rest']
+
+    mu_bh = config['mu_bh']
+    mu_bf = config['mu_bf']
     
+    sigma = config['sigma']
+
+    mu = np.array([mu_bh, 0.5, mu_bf])
+    sd    = np.array([sigma, sigma, sigma]) 
+
     return config
 
 def compute_likelihood(means,st,samples):
@@ -62,6 +71,7 @@ def on_receive_data(msg: NeuroOutput):
     global predictive_prob, likelihoods, posterior_prob
     global mu, sd, probability_update_matrix, initial_probability
     global window
+
     predictive_prob, likelihoods, posterior_prob = one_step_update(probability_update_matrix,posterior_prob,  msg.softpredict.data[0], mu, sd,window)
 
 def main():
@@ -87,9 +97,10 @@ def main():
     posterior_prob  = []
     
     global mu, sd, probability_update_matrix, initial_probability
-    mu_bf = 0.1
-    mu_bh = 0.9
-    sigma = 0.1
+    mu_bf =     rospy.get_param('~mu_bf', 0.1)
+    mu_bh = 1 - rospy.get_param('~mu_bx', 0.1)
+    sigma =     rospy.get_param('~sigma', 0.1)
+
     mu = np.array([mu_bh, 0.5, mu_bf])
     sd    = np.array([sigma, sigma, sigma])
 
