@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   rosneuro_msgs
   rospy
   dynamic_reconfigure
+#  rosneuro_psd
 )
 
 ## System dependencies are found with CMake's conventions

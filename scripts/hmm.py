@@ -5,6 +5,7 @@ import queue
 import numpy as np
 from scipy.stats import norm
 from rosneuro_msgs.msg import NeuroOutput, NeuroEvent
+from std_msgs.msg import Float64MultiArray
 
 from dynamic_reconfigure.server import Server
 from rosneuro_hmm.cfg import HmmConfig
@@ -72,7 +73,17 @@ def on_receive_data(msg: NeuroOutput):
     global mu, sd, probability_update_matrix, initial_probability
     global window
 
+    # rospy.loginfo(probability_update_matrix)
+
     predictive_prob, likelihoods, posterior_prob = one_step_update(probability_update_matrix,posterior_prob,  msg.softpredict.data[0], mu, sd,window)
+
+def on_receive_traversability(msg: Float64MultiArray):
+    global probability_update_matrix
+
+    try:
+        probability_update_matrix = np.array(msg.data).reshape(3,3)
+    except:
+        ROS_ERROR("Wrong matrix shape")
 
 def main():
     rospy.init_node('my_integrator')
@@ -110,15 +121,16 @@ def main():
     initial_probability = np.array([1/3,1/3,1/3])
     
     predictive_prob = initial_probability
-    posterior_prob = initial_probability
-    likelihoods = initial_probability
+    posterior_prob  = initial_probability
+    likelihoods     = initial_probability
 
     rospy.Subscriber("/smrbci/neuroprediction", NeuroOutput, on_receive_data)
-    
-    pub = rospy.Publisher('/my_integrator/neuroprediction', NeuroOutput, queue_size=1)
+    rospy.Subscriber("/hmm/traversability_matrix", Float64MultiArray, on_receive_traversability)
+
+    pub = rospy.Publisher('/hmm/neuroprediction', NeuroOutput, queue_size=1)
         
     q = queue.Queue()
-    mean_window = 1
+    mean_window = 8
     out = []
      
     Hz = 16
@@ -134,7 +146,8 @@ def main():
       state = np.mean(f)
       
       state = 1 - state/2
-      msg.softpredict.data = np.array([state, 1-state])
+      msg.softpredict.data = np.array(posterior_prob) # check  this
+      # np.array([state, 1-state])
       pub.publish(msg)
 
       rate.sleep()
