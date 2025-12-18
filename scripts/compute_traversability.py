@@ -5,6 +5,13 @@ import numpy as np
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from sensor_msgs.msg import LaserScan
 
+
+# SMALL_VALUE = 1e-5
+SMALL_VALUE = 0.0
+
+BIG_VALUE   = 9.1
+NORM_VALUE  = 0.0
+
 class compute_traversability:
     def __init__(self):
         rospy.init_node('compute_traversability')
@@ -22,7 +29,16 @@ class compute_traversability:
         self.rate         = rospy.get_param('~rate', 16)
         self.num_sectors  = rospy.get_param('~num_sectors', 3)
         self.simple_mode  = rospy.get_param('~simple_mode', True)
-        self.min_distance = rospy.get_param('~min_distance', 4)
+        self.min_distance = rospy.get_param('~min_distance', 3)
+        self.task         = rospy.get_param('~task', 'simulation')  
+
+        if (self.task == 'real'):
+            self.is_simulation = False
+            self.min_distance = 1.2
+        else:
+            self.is_simulation = True
+            self.min_distance = 3.6
+
         self.help_on      = rospy.get_param('~help', True)
         # Simple-mode will be the only programmed for now: it only check if he need to compute low help or high help
         # The alternative is to create a matrix depending to the position of the obstacles near the robot
@@ -103,8 +119,8 @@ class compute_traversability:
     def create_matrix_2(self, directio_obj):
         i = np.argwhere(directio_obj == False)[0]
 
-        l = np.array([0.1, 0.1, 0.1])
-        l[i] = 1.5
+        l = np.array([NORM_VALUE, NORM_VALUE, NORM_VALUE])
+        l[i] = BIG_VALUE
 
         l = l / np.sum(l)
 
@@ -113,8 +129,9 @@ class compute_traversability:
     def create_matrix_1(self, directio_obj):
         i = np.argwhere(directio_obj == True)[0]
 
-        l = np.array([1.1, 1.1, 1.1])
-        l[i] = 0.01
+        # WAS NORM VALUE (Now zero everywhere)
+        l = np.array([BIG_VALUE, BIG_VALUE, BIG_VALUE])
+        l[i] = SMALL_VALUE
 
         l = l / np.sum(l)
 

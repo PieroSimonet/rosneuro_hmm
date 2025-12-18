@@ -30,8 +30,17 @@ class continous_hmm:
         self.trav_matrix = np.ones((3, 3))/9
 
         self.posterior_prob = np.ones(3)/3
-        self.mean = np.array([0.9, 0.1])
-        self.st   = np.array([0.1, 0.1])
+
+        basepath = rospy.get_param('~cfg_name', "HmmCfg")
+
+        mean = np.array([0.9, 0.1])
+        st   = np.array([0.1, 0.1])
+
+        mean_new = rospy.get_param('/'+basepath+'/params/mu', mean)
+        st_new   = rospy.get_param('/'+basepath+'/params/std', st)
+
+        self.mean = np.array(mean_new).astype(np.float64)
+        self.st   = np.array(st_new).astype(np.float64)
 
     def reset(self):
         self.posterior_prob = np.ones(3)/3

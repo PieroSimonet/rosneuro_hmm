@@ -1,0 +1,7 @@
+HmmCfg:
+  name: "hmm"
+  params:
+    subject: "s2"
+    filenames_model: "/var/home/piero/Projects/gdf_recordings/mi_bhbf/calibration/s2/s2_bhbf_20251211.smr.mat"
+    mu: [0.753918, 0.210997, NaN]
+    std: [0.327432, 0.257385, NaN]
